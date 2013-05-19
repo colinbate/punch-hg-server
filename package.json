@@ -1,0 +1,27 @@
+{
+  "name": "punch-hg-server",
+  "version": "0.0.1",
+  "description": "A node.js static web server which will generate a punch site based on pushes to a mercurial (Bitbucket) repository.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "mercurial",
+    "url": "https://bitbucket.org/colinbate/punch-hg-server"
+  },
+  "keywords": [
+    "punch",
+    "server",
+    "mercurial",
+    "hg"
+  ],
+  "author": "Colin Bate <colin@colinbate.com>",
+  "license": "MIT",
+  "dependencies": {
+    "punch": "0.x.x",
+    "connect": "2.x.x",
+    "connect-route": "0.x.x",
+    "hg": "0.x.x"
+  }
+}
