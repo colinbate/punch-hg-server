@@ -22,6 +22,7 @@
     "punch": "0.x.x",
     "connect": "2.x.x",
     "connect-route": "0.x.x",
-    "hg": "0.x.x"
+    "hg": "0.x.x",
+    "q": "0.x.x"
   }
 }
