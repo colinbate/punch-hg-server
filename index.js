@@ -30,34 +30,36 @@ var repoOk = repo.refresh();
 
 // Run punch.generate()
 var runGenerator = function (input, output) {
+	var makeAbsolute = function (dir) {
+		return path.join(input, dir);
+	};
 	var defer = q.defer();
 	console.log('Generating site in ' + input + ' to ' + output);
 	console.log('Changing working dir to: ' + input);
 	try {
 		var pwd = process.cwd();
 		process.chdir(input);
-		punch.SiteGenerator.setup({generator : {blank: true}});
-		punch.SiteGenerator.generate(function () {
-			console.log('Site generated!');
-			process.chdir(pwd);
-			defer.resolve();
+		punch.ConfigHandler.getConfig(false, function (config) {
+			config.generator.blank = true;
+			//config.template_dir = makeAbsolute(config.template_dir);
+			//config.content_dir = makeAbsolute(config.content_dir);
+			//config.output_dir = makeAbsolute(config.output_dir);
+			//config.shared_content = makeAbsolute(config.shared_content);
+
+			//console.log(require('util').inspect(config));
+			punch.SiteGenerator.setup(config);
+			punch.SiteGenerator.generate(function () {
+				console.log('Site generated!');
+				defer.resolve();
+			});
 		});
+		
 	} catch (err) {
 		console.log('Could not change to ' + input + ', no site generated: ' + err);
 		defer.reject(err);
 	}
 	return defer.promise;
 };
-
-repoOk.then(function () {
-	return runGenerator(remoteSite, remoteSiteOutput);
-}, function (err) {
-	console.log('Error: ' + err);
-	var defer = q.defer();
-	remoteSiteOutput = path.join(__dirname, 'norepo');
-	defer.resolve();
-	return defer.promise;
-}).then(setupWebServer);
 
 // Start the connect server
 var setupWebServer = function () {
@@ -66,14 +68,29 @@ var setupWebServer = function () {
 	connect().use(
 		// API for notifying of pushes
 		connectRoute(function (app) {
-			app.get('/_update', function (req, res, next) {
-				if (repo.refresh()) {
-					runGenerator();
-				}
-				res.end('OK');
+			app.post('/_update', function (req, res, next) {
+				repo.refresh().then(function () {
+					runGenerator(remoteSite, remoteSiteOutput);
+				}).then(function () {
+					res.end('OK');
+				}, function (err) {
+					res.end('Fail: ' + err);
+				});
 			});
 		}))
 		.use(connect['static'](remoteSiteOutput))
 	.listen(runPort, runHost);
 	console.log('process ' + process.pid + ' running at ' + runHost + ':' + runPort + ' serving ' + remoteSiteOutput);
-}
+};
+
+repoOk.then(function () {
+	return runGenerator(remoteSite, remoteSiteOutput);
+}).fail(function (err) {
+	console.log('Error: ' + err);
+	var defer = q.defer();
+	remoteSiteOutput = path.join(__dirname, 'norepo');
+	defer.resolve();
+	return defer.promise;
+}).then(setupWebServer);
+
+
