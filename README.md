@@ -10,9 +10,10 @@ Not interested in the whats and the whys?
 1. Download [node.js][dn]
 2. Clone (`hg clone https://colinbate@bitbucket.org/colinbate/punch-hg-server`) or [download][dl]
    this repository (until I sort out getting it up on NPM)
-3. Edit `config.json` with your desired port and the repository containing your Punch site.
-4. `node index.js`
-5. Set up the [POST service][bp] on your Bitbucket repository to hit `<your site>/_update`
+3. Enter project folder and run: `npm install`
+4. Edit `config.json` with your desired port and the repository containing your Punch site.
+5. `node index.js`
+6. Set up the [POST service][bp] on your Bitbucket repository to hit `<your site>/_update`
 
 ## Inspiration
 
