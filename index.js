@@ -31,10 +31,8 @@ var opts = require('./config.json'),
 
 // Start the connect server
 var setupWebServer = function (opts) {
-  var server = connect();
-  if (opts.autoUpdate) {
-    server.use(connectRoute(function (app) {
-      app.get('/_update', function (req, res) {
+  var server = connect(),
+      handler = function (req, res) {
         repo.refresh().then(function () {
           opts.site.generate();
         }).then(function () {
@@ -42,7 +40,11 @@ var setupWebServer = function (opts) {
         }, function (err) {
           res.end('Fail: ' + err);
         });
-      });
+      };
+  if (opts.autoUpdate) {
+    server.use(connectRoute(function (app) {
+      app.get('/_update', handler);
+      app.post('/_update', handler);
     }));
   }
   server.use(connect['static'](opts.outputPath));
