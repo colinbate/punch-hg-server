@@ -2,5 +2,5 @@
 	"repo": "",
 	"port": 8080,
 	"host": "0.0.0.0",
-	"remoteSiteCache": "data",
+	"remoteSiteCache": "data"
 }

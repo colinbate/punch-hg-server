@@ -1,11 +1,11 @@
-/*jslint node: true , white: true, nomen: true */
+/*jslint node: true, white: true, nomen: true */
 'use strict';
 
 var connect = require('connect');
 var connectRoute = require('connect-route');
 var hg = require('./lib/hg-fetch');
 var utils = require('./lib/utils');
-var punch = require('punch');
+var punch = require('./lib/punch-site');
 var q = require('q');
 var path = require('path');
 
@@ -20,67 +20,57 @@ var defaults = {
 var opts = require('./config.json'),
     config = utils.extend({}, defaults, opts),
     remoteSite = path.join(__dirname, config.remoteSiteCache),
+    runPort = process.env.PORT || config.port || 8080,
+    runHost = process.env.IP || config.host || '0.0.0.0',
     remoteSiteOutput,
+    punchInstance,
 
     // Check the remote repo for updates
-    repo = hg(config.repo, remoteSite),
-    repoOk = repo.refresh();
+    repo = hg(config.repo, remoteSite);
 
-// Run punch.generate()
-var runGenerator = function (input) {
-  var defer = q.defer();
-  console.log('Changing working dir to: ' + input);
-  try {
-
-    process.chdir(input);
-    punch.ConfigHandler.getConfig(false, function (config) {
-      remoteSiteOutput = path.join(remoteSite, config.output_dir);
-      //console.log(require('util').inspect(config));
-      config.generator.blank = true;
-      punch.SiteGenerator.setup(config);
-      punch.SiteGenerator.generate(function () {
-        console.log('Site generated!');
-        defer.resolve();
-      });
-    });
-    
-  } catch (err) {
-    console.log('Could not change to ' + input + ', no site generated: ' + err);
-    defer.reject(err);
-  }
-  return defer.promise;
-};
 
 // Start the connect server
-var setupWebServer = function () {
-  var runPort = process.env.PORT || config.port || 8080,
-      runHost = process.env.IP || config.host || '0.0.0.0';
-  connect().use(
-    // API for notifying of pushes
-    connectRoute(function (app) {
-      app.post('/_update', function (req, res) {
+var setupWebServer = function (opts) {
+  var server = connect();
+  if (opts.autoUpdate) {
+    server.use(connectRoute(function (app) {
+      app.get('/_update', function (req, res) {
         repo.refresh().then(function () {
-          runGenerator(remoteSite);
+          opts.site.generate();
         }).then(function () {
           res.end('OK');
         }, function (err) {
           res.end('Fail: ' + err);
         });
       });
-    }))
-    .use(connect['static'](remoteSiteOutput))
-  .listen(runPort, runHost);
-  console.log('process ' + process.pid + ' running at ' + runHost + ':' + runPort + ' serving ' + remoteSiteOutput);
+    }));
+  }
+  server.use(connect['static'](opts.outputPath));
+  server.listen(opts.port, opts.host);
+  console.log('process ' + process.pid + ' running at ' + opts.host + ':' + opts.port + ' serving ' + opts.outputPath);
 };
 
-repoOk.then(function () {
-  return runGenerator(remoteSite);
+repo.refresh().then(function () {
+  return punch(remoteSite);
+}).then(function (site) {
+  punchInstance = site;
+  return site.generate();
 }).fail(function (err) {
   var defer = q.defer();
   console.log(err);
-  remoteSiteOutput = path.join(__dirname, 'norepo');
-  defer.resolve();
+  defer.resolve(path.join(__dirname, 'norepo'));
   return defer.promise;
-}).then(setupWebServer);
+}).then(function (outputDir) {
+  var options = {
+    autoUpdate: !!punchInstance,
+    outputPath: outputDir,
+    host: runHost,
+    port: runPort,
+    site: punchInstance
+  };
+  setupWebServer(options);
+}).fail(function (err) {
+  console.log(err);
+});
 
 
