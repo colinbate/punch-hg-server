@@ -1,6 +1,6 @@
 {
   "name": "punch-hg-server",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "A node.js static web server which will generate a punch site based on pushes to a mercurial (Bitbucket) repository.",
   "main": "index.js",
   "scripts": {

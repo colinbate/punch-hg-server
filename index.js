@@ -6,7 +6,7 @@ var connectRoute = require('connect-route');
 var hg = require('./lib/hg-fetch');
 var utils = require('./lib/utils');
 var punch = require('./lib/punch-site');
-var q = require('q');
+var errors = require('./lib/errors');
 var path = require('path');
 
 // Load the config
@@ -17,11 +17,10 @@ var defaults = {
   repo: ''
 };
 
-var opts = require('./config.json'),
-    config = utils.extend({}, defaults, opts),
+var config = utils.getConfig(__dirname, defaults),
     remoteSite = path.join(__dirname, config.remoteSiteCache),
-    runPort = process.env.PORT || config.port || 8080,
-    runHost = process.env.IP || config.host || '0.0.0.0',
+    runPort = process.env.PORT || config.port,
+    runHost = process.env.IP || config.host,
     remoteSiteOutput,
     punchInstance,
 
@@ -58,10 +57,10 @@ repo.refresh().then(function () {
   punchInstance = site;
   return site.generate();
 }).fail(function (err) {
-  var defer = q.defer();
-  console.log(err);
-  defer.resolve(path.join(__dirname, 'norepo'));
-  return defer.promise;
+  if (err instanceof errors.NoContentError) {
+    throw err;
+  }
+  return punchInstance.outputPath;
 }).then(function (outputDir) {
   var options = {
     autoUpdate: !!punchInstance,
@@ -72,7 +71,7 @@ repo.refresh().then(function () {
   };
   setupWebServer(options);
 }).fail(function (err) {
-  console.log(err);
+  console.log(err.toString());
 });
 
 
